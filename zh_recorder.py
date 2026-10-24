@@ -248,7 +248,7 @@ def parse_rep_stream(path):
                 elif c == 1052:
                     events.append({'s': sec, 'p': pn, 'type': 'Sell', 'txt': "Sold structure (credited)"})
 
-                elif c in (1093, 1053):
+                elif c == 1093:
                     events.append({'s': sec, 'p': pn, 'type': 'Exit', 'txt': "Surrendered / left game"})
 
                 elif 1006 <= c <= 1015:
@@ -273,17 +273,21 @@ def parse_rep_stream(path):
             # 2. Filter for contested hotspots (orders from >1 opposing team and >=4 total orders).
             # 3. Merge adjacent clashes occurring within 35 seconds and 600 distance units into cohesive continuous engagements.
             clash_bins = {}
+            valid_teams = {str(p.get('team', '–')) for p in players.values() if str(p.get('team', '–')) not in ('–', '-', '0', '')}
+            use_teams = len(valid_teams) >= 2
             for p in players.values():
                 p['n'] = len(p['acts'])
                 p['last'] = p['acts'][-1] if p['acts'] else 0
                 p['apm'] = round(p['n'] / max(1, p['last'] / 60))
                 p['eapm'] = round(len(p.get('eacts', p['acts'])) / max(1, p['last'] / 60))
+                t_val = str(p.get('team', '–'))
+                side_key = f"T_{t_val}" if (use_teams and t_val in valid_teams) else f"P_{p['id']}"
                 for m in p['moves']:
                     if m['kind'] != 'move':
                         key = (int(m['s'] // 15) * 15, int(m['x'] // 350) * 350, int(m['y'] // 350) * 350)
                         b = clash_bins.setdefault(key, {'s': key[0], 'orders': 0, 'teams': set(), 'pts': []})
                         b['orders'] += 1
-                        b['teams'].add(p['team'])
+                        b['teams'].add(side_key)
                         b['pts'].append((m['x'], m['y']))
 
             raw_clashes = sorted([b for b in clash_bins.values() if len(b['teams']) > 1 and b['orders'] >= 4], key=lambda x: x['s'])
