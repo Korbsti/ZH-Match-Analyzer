@@ -11,6 +11,16 @@ inspect real-time combat casualty spikes & economy cash flow,
 and enjoy candid player performance breakdowns.
 
 -------------------------------------------------------
+PROJECT STATUS: EXPERIMENTAL
+-------------------------------------------------------
+NOTE: This software suite is currently EXPERIMENTAL and in
+active development. While core replay parsing, tactical radar map
+playback, and live companion telemetry work across standard
+multiplayer matches, you will most likely need some extra edits
+and tweaks to the code as you test different mod packs, custom map
+boundaries, or unusual netcode conditions.
+
+-------------------------------------------------------
 IMPORTANT COMPATIBILITY NOTICE:
 -------------------------------------------------------
 HUMAN PLAYERS ONLY: This tool does NOT support AI opponents
@@ -52,7 +62,6 @@ KEY FEATURES:
 - Accurate SAGE World Bounds mapping (Keep of the Beach, Armored Fury, etc.)
 - Maneuver paths, attack vectors, and combat density hotspots
 - Automatic base cleanup when a player is eliminated
-- Team victory trophies for the entire winning squad
 - Tactical MVP & Ineffective Player breakdown
 - Full Mod Compatibility: ROTR, ShockWave, Contra, Vanilla Zero Hour
 

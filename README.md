@@ -8,7 +8,10 @@
 
 ---
 
-## Important Compatibility Notice
+## Experimental Status & Compatibility Notice
+
+> [!WARNING]
+> **Active Development / Experimental**: This project is currently **experimental**. While core replay parsing, tactical radar map scrubbing, and live companion recording work across standard multiplayer matches, edge cases (such as exotic mod pack command IDs, uncalibrated map boundaries, or unusual game connection drops) will most likely need some extra edits and tweaks to the code.
 
 **Human Players Only (AI Opponents NOT Supported)**: This analyzer and companion suite does **NOT** support AI / Computer bot skirmish matches. In the Command & Conquer Generals Zero Hour SAGE engine, AI decisions, scripts, and build queues run purely in local memory on your CPU and are never logged into replay command packets (`.rep`). Replays must be from human-vs-human matches (Multiplayer, LAN, GameRanger, CnCNet, Radmin, etc.).
 

@@ -1,6 +1,7 @@
 @echo off
 title Zero Hour Match Statistics Enhancer
 cd /d "%~dp0"
+chcp 65001 >nul
 
 echo ========================================================
 echo    ZERO HOUR MATCH STATISTICS ENHANCER ^& RECORDER
@@ -16,16 +17,16 @@ if exist "ZH_Replay_Analyzer.html" (
 :: 2. Check system PATH for python
 where python >nul 2>nul
 if %ERRORLEVEL% equ 0 (
-    echo [*] Starting Live Telemetry Companion (python)...
-    python zh_recorder.py
+    echo [*] Starting Live Telemetry Companion [python]...
+    python -u zh_recorder.py
     goto done
 )
 
 :: 3. Check for py launcher
 where py >nul 2>nul
 if %ERRORLEVEL% equ 0 (
-    echo [*] Starting Live Telemetry Companion (py)...
-    py zh_recorder.py
+    echo [*] Starting Live Telemetry Companion [py]...
+    py -u zh_recorder.py
     goto done
 )
 
@@ -41,7 +42,7 @@ for %%p in (
     "C:\Python310\python.exe"
 ) do (
     if exist "%%p" (
-        echo [*] Starting Live Telemetry Companion (%%p)...
+        echo [*] Starting Live Telemetry Companion [%%p]...
         "%%p" zh_recorder.py
         goto done
     )
