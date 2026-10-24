@@ -8,6 +8,12 @@
 
 ---
 
+## Important Compatibility Notice
+
+**Human Players Only (AI Opponents NOT Supported)**: This analyzer and companion suite does **NOT** support AI / Computer bot skirmish matches. In the Command & Conquer Generals Zero Hour SAGE engine, AI decisions, scripts, and build queues run purely in local memory on your CPU and are never logged into replay command packets (`.rep`). Replays must be from human-vs-human matches (Multiplayer, LAN, GameRanger, CnCNet, Radmin, etc.).
+
+---
+
 ## Overview
 
 **ZH Match Analyzer** is an advanced, client-side tactical replay analyzer and live telemetry system designed for competitive and casual *Zero Hour* players. Built to analyze standard SAGE `.rep` files as well as comprehensive live companion logs (`.zhtelemetry`), it brings modern esports-grade telemetry, casualty breakdowns, second-by-second economy tracking, and high-resolution spatial radar visualization directly to your browser.
@@ -78,6 +84,14 @@ To unlock the **Combat & Economy** tab, live unit destruction curves, and casual
 2. Play your *Zero Hour* game normally.
 3. The companion recorder (`zh_recorder.py`) will automatically capture live lockstep memory events and generate a `.zhtelemetry` file.
 4. The file automatically opens in the Analyzer.
+
+---
+
+## Replay Requirements & Caveats
+
+- **Human Players Only**: Replays containing AI / Computer players are not supported.
+- **Supported Formats**: SAGE Lockstep replay files (`.rep`) and companion live telemetry files (`.zhtelemetry`).
+- **Network / Match Types**: 1v1, 2v2, 3v3, 4v4, and Free-For-All human matches (Multiplayer, LAN, Direct Connect).
 
 ---
 
