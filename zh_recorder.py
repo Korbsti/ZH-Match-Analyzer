@@ -121,20 +121,27 @@ def parse_rep_stream(path):
             cash = tokens.get('SC', '10000')
 
             # Slot format: H[name],[ip],[port],...,[color],[faction],[team] (or C for computer bot)
+            FACTIONS = {'-1':'Random','0':'USA','1':'China','2':'GLA','3':'USA Superweapon','4':'USA Laser','5':'USA Air Force','6':'China Tank','7':'China Infantry','8':'China Nuke','9':'GLA Toxin','10':'GLA Demo','11':'GLA Stealth'}
             slots = []
             for s in tokens.get('S', '').split(':'):
-                if s and (s[0] == 'H' or s[0] == 'C'):
+                if not s:
+                    continue
+                if s[0] == 'H' or s[0] == 'C':
                     parts = s[1:].split(',')
                     pname = parts[0] if parts else 'Player'
                     if s[0] == 'C':
                         pname = "AI " + ('Easy' if parts[0]=='E' else 'Medium' if parts[0]=='M' else 'Hard' if parts[0]=='H' else parts[0])
+                    raw_t = parts[7] if s[0] == 'H' and len(parts) > 7 else (parts[4] if s[0] == 'C' and len(parts) > 4 else '-1')
+                    raw_f = parts[5] if s[0] == 'H' and len(parts) > 5 else (parts[2] if s[0] == 'C' and len(parts) > 2 else '')
                     slots.append({
                         'name': pname,
-                        'team': str(int(parts[7]) + 1) if len(parts) > 7 and parts[7].lstrip('-').isdigit() else '1',
-                        'faction': parts[5] if len(parts) > 5 else '',
+                        'team': str(int(raw_t) + 1) if raw_t.lstrip('-').isdigit() and int(raw_t) >= 0 else '–',
+                        'faction': FACTIONS.get(raw_f, ''),
                         'color': parts[4] if len(parts) > 4 else '',
                         'ai': s[0] == 'C'
                     })
+                else:
+                    slots.append(None)
 
             players = {}
             events = []
@@ -167,8 +174,13 @@ def parse_rep_stream(path):
                 total_orders += 1
 
                 if pn not in players:
-                    s_idx = pn - 2 if pn >= 2 else 0
-                    p_meta = slots[s_idx] if s_idx < len(slots) else {'name': f'Player {pn}', 'team': '1', 'ai': False}
+                    p_meta = None
+                    if 0 <= pn - 2 < len(slots) and slots[pn - 2]:
+                        p_meta = slots[pn - 2]
+                    elif 0 <= pn - 1 < len(slots) and slots[pn - 1]:
+                        p_meta = slots[pn - 1]
+                    if not p_meta:
+                        p_meta = {'name': f'Player {pn}', 'team': '–', 'ai': False}
                     players[pn] = {
                         'id': pn,
                         'name': p_meta['name'],
@@ -306,6 +318,7 @@ def parse_rep_stream(path):
                 p['peak'] = pk
                 p['firstBuild'] = p['builds'][0]['s'] if p['builds'] else None
                 p['firstUnit'] = p['units'][0]['s'] if p['units'] else None
+                p['left'] = any(e['p'] == p['id'] and e['type'] == 'Exit' for e in events) or (p['last'] < round(dur) - 60)
 
             return {
                 'title': title,
@@ -358,25 +371,43 @@ def compute_match_casualties_and_economy(P, dur, raw_cash_str, win_list):
     # Step 1: Compute unit counts, baseline survival rates, and combat engagement scores
     for pid, pl in P.items():
         units = pl.get('units', [])
-        units_count = len(units) or max(8, int((pl.get('apm', 60) * (dur / 60)) * 0.15))
+        units_count = len(units) or max(8, round((pl.get('apm', 60) * (dur / 60)) * 0.15))
         attacks_count = len([m for m in pl.get('moves', []) if m.get('kind') != 'move'])
         powers_count = len(pl.get('powers', []))
-        is_winner = int(pid) in win_set or not pl.get('left')
-        loss_rate = 0.50 if is_winner else 0.94
+        is_winner = not pl.get('left', False)
+        loss_rate = 0.48 if is_winner else 0.94
         pl['_totalLosses'] = max(1, math.floor(units_count * loss_rate))
         pl['_combatScore'] = (pl.get('apm', 70) * 1.2) + (attacks_count * 4) + (powers_count * 5) + (units_count * 0.8)
         pl['_isWinner'] = is_winner
         pl['_unitsTotal'] = units_count
 
-    # Step 2: Distribute kills according to team casualty conservation
+    # Step 2: Distribute kills according to exact casualty conservation (Total Kills == Total Losses)
+    valid_teams = {str(pl.get('team', '–')) for pl in P.values() if str(pl.get('team', '–')) not in ('–', '-', '0', '')}
+    use_teams = len(valid_teams) >= 2
     for pid, pl in P.items():
-        my_team = str(pl.get('team', '1'))
-        opposing_losses = sum(other['_totalLosses'] for other_id, other in P.items() if str(other.get('team')) != my_team)
-        if opposing_losses == 0:
-            opposing_losses = sum(other['_totalLosses'] for other_id, other in P.items() if other_id != pid)
-        team_score = sum(teammate['_combatScore'] for teammate_id, teammate in P.items() if str(teammate.get('team')) == my_team) or 1
-        my_share = pl['_combatScore'] / team_score
-        pl['_totalKills'] = max(1, math.floor(opposing_losses * my_share))
+        t_val = str(pl.get('team', '–'))
+        pl['_teamKey'] = f"team_{t_val}" if (use_teams and t_val in valid_teams) else f"solo_{pid}"
+        pl['_totalKills'] = 0
+
+    for victim_id, victim in P.items():
+        enemies = [other for other_id, other in P.items() if other['_teamKey'] != victim['_teamKey']]
+        if not enemies:
+            enemies = [other for other_id, other in P.items() if other_id != victim_id]
+        if not enemies:
+            continue
+        enemy_score_sum = sum(e['_combatScore'] for e in enemies) or 1
+        losses_to_distribute = victim['_totalLosses']
+        shares = []
+        allocated = 0
+        for e in enemies:
+            exact = losses_to_distribute * (e['_combatScore'] / enemy_score_sum)
+            fl = math.floor(exact)
+            allocated += fl
+            shares.append([exact - fl, e['_combatScore'], e, fl])
+        shares.sort(key=lambda x: (x[0], x[1]), reverse=True)
+        rem = losses_to_distribute - allocated
+        for idx in range(len(shares)):
+            shares[idx][2]['_totalKills'] += shares[idx][3] + (1 if idx < rem else 0)
 
     # Step 3: Compute second-by-second economy cash reserves and combat casualty trajectories
     for pid, pl in P.items():
@@ -465,6 +496,7 @@ def compute_match_casualties_and_economy(P, dur, raw_cash_str, win_list):
         del pl['_combatScore']
         del pl['_isWinner']
         del pl['_unitsTotal']
+        pl.pop('_teamKey', None)
 
 def save_match(parsed, target_file, rep_dir):
     dt = datetime.datetime.now()
