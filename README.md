@@ -74,7 +74,7 @@ Switch languages seamlessly with one click from the top-left menu:
 ## Quick Start
 
 ### Option A: Use the Web Dashboard (No Installation Required)
-1. Double-click `ZH_Replay_Analyzer.html` (or `index.html`) in your browser (Google Chrome, Microsoft Edge, Firefox, or Safari).
+1. Double-click `ZH_Replay_Analyzer.html` in your browser (Google Chrome, Microsoft Edge, Firefox, or Safari).
 2. Click **Scan Replays Folder** or drag any `.rep` file into the window.
 3. Explore the 9 tactical tabs and enjoy instant playback.
 
