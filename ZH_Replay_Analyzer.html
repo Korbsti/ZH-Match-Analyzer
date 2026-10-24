@@ -2267,30 +2267,57 @@ const idbSet = async v => { const d = await IDB(); d.transaction('h', 'readwrite
 const idbGet = async () => { const d = await IDB(); return new Promise(r => { const q = d.transaction('h').objectStore('h').get('dir'); q.onsuccess = () => r(q.result); q.onerror = () => r(); }); };
 let DIR = null;
 
+async function* iterateDir(dirHandle) {
+  try {
+    if (typeof dirHandle.values === 'function') {
+      for await (const entry of dirHandle.values()) yield entry;
+    } else if (typeof dirHandle.entries === 'function') {
+      for await (const [, entry] of dirHandle.entries()) yield entry;
+    } else if (dirHandle[Symbol.asyncIterator]) {
+      for await (const entry of dirHandle) {
+        yield Array.isArray(entry) ? entry[1] : entry;
+      }
+    }
+  } catch(e) {
+    console.warn("Iterator error for dir:", dirHandle.name, e);
+  }
+}
+
 async function scanDir(h) {
-  saveDirHandle('replay_dir', h);
+  if (!h) return;
+  if ($('dirInfo')) $('dirInfo').innerHTML = `<span class="text-sky-400">Scanning <b>${h.name}</b> for match replays...</span>`;
+  
+  // Non-blocking save to storage
+  try { saveDirHandle('replay_dir', h); } catch(e){}
+
   const reps = [];
   const telems = [];
   const tgas = {};
 
   async function walk(handle, depth = 0) {
     try {
-      for await (const e of handle.values()) {
+      for await (const e of iterateDir(handle)) {
         if (e.kind === 'file') {
           if (/\.rep$/i.test(e.name)) {
-            const f = await e.getFile();
-            reps.push({ f, t: f.lastModified });
+            try {
+              const f = await e.getFile();
+              reps.push({ f, t: f.lastModified });
+            } catch(err){}
           } else if (/\.(zhtelemetry|json)$/i.test(e.name)) {
-            const f = await e.getFile();
-            telems.push(f);
+            try {
+              const f = await e.getFile();
+              telems.push(f);
+            } catch(err){}
           } else if (/\.tga$/i.test(e.name)) {
-            const f = await e.getFile();
-            const b = await f.arrayBuffer();
-            const url = parseTga(b);
-            if (url) tgas[normMap(f.name)] = url;
+            try {
+              const f = await e.getFile();
+              const b = await f.arrayBuffer();
+              const url = parseTga(b);
+              if (url) tgas[normMap(f.name)] = url;
+            } catch(err){}
           }
         } else if (e.kind === 'directory' && depth < 2) {
-          // Recursively scan subfolders (e.g. Replays folder if parent Command & Conquer folder was picked)
+          // Recursively inspect subfolders (e.g. Replays folder inside game data folder)
           await walk(e, depth + 1);
         }
       }
@@ -2313,7 +2340,9 @@ async function loadList(files, label, tgaDict = {}, telemFiles = []) {
       const txt = await tf.text();
       const x = parseTelemetryJSON(txt, tf.name);
       if (x) R.push(x);
-    } catch(e){}
+    } catch(e){
+      console.warn("Error reading telemetry", tf.name, e);
+    }
   }
 
   for (const f of files) {
@@ -2322,17 +2351,19 @@ async function loadList(files, label, tgaDict = {}, telemFiles = []) {
       const nm = normMap(f.name);
       const x = parse(b, f.name, tgaDict[nm] || null);
       if (x) R.push(x);
-    } catch(e){}
+    } catch(e){
+      console.warn("Error reading replay", f.name, e);
+    }
   }
   cur = 0;
   if (!R.length) {
-    $('dirInfo').innerHTML = `<div class="p-2.5 bg-amber-950/50 border border-amber-800/70 rounded-lg text-amber-200 text-xs leading-relaxed">
+    if ($('dirInfo')) $('dirInfo').innerHTML = `<div class="p-2.5 bg-amber-950/60 border border-amber-800 rounded-lg text-amber-200 text-xs leading-relaxed">
       <b class="text-white">⚠️ No .rep replays found in "${label}"</b><br>
       Zero Hour match replays are saved in:<br>
       <code class="text-amber-300 font-mono text-[11px] break-all select-all">Documents\Command and Conquer Generals Zero Hour Data\Replays</code>
     </div>`;
   } else {
-    $('dirInfo').textContent = `📂 ${label} · ${R.length} entries loaded`;
+    if ($('dirInfo')) $('dirInfo').innerHTML = `<span class="text-emerald-400 font-semibold">✓ 📂 ${label} · ${R.length} match replays loaded</span>`;
   }
   render();
 }
@@ -2352,64 +2383,36 @@ $('curBtn').onclick = async () => {
     }
   } catch(e){}
 
-  const rawPath = decodeURIComponent(location.pathname).replace(/^\/([A-Za-z]:)/, '$1').replace(/\/[^\/]*$/, '').replace(/\//g, '\\');
-  // Check if current path looks like a replays folder
-  const isReplayDir = /replays/i.test(rawPath);
-  const guidePath = isReplayDir ? rawPath : "Documents\\Command and Conquer Generals Zero Hour Data\\Replays";
-  
-  try { await navigator.clipboard.writeText(guidePath); } catch(e){}
-  $('dirInfo').innerHTML = `Select your Zero Hour <b>Replays</b> folder.<br><span class="font-mono text-sky-400 text-[11px] break-all select-all">${guidePath}</span>`;
   $('dirBtn').click();
-};
-
-$('mapDirBtn').onclick = async () => {
-  if (window.showDirectoryPicker) {
-    try {
-      const h = await showDirectoryPicker({ id: 'zhmaps', mode: 'read' });
-      let loaded = 0;
-      for await (const entry of h.values()) {
-        if (entry.kind === 'directory') {
-          for await (const subEntry of entry.values()) {
-            if (subEntry.kind === 'file' && /\.tga$/i.test(subEntry.name)) {
-              const f = await subEntry.getFile();
-              const b = await f.arrayBuffer();
-              const url = parseTga(b);
-              if (url) {
-                MAP_TERRAINS[normMap(f.name)] = url;
-                loaded++;
-              }
-            }
-          }
-        } else if (entry.kind === 'file' && /\.tga$/i.test(entry.name)) {
-          const f = await entry.getFile();
-          const b = await f.arrayBuffer();
-          const url = parseTga(b);
-          if (url) {
-            MAP_TERRAINS[normMap(entry.name)] = url;
-            loaded++;
-          }
-        }
-      }
-      $('dirInfo').innerHTML = `<span class="text-emerald-400 font-semibold">✓ Loaded ${loaded} map backgrounds!</span>`;
-      render();
-    } catch(e){}
-  }
 };
 
 $('dirBtn').onclick = async () => {
   if (window.showDirectoryPicker) {
     try {
       DIR = await showDirectoryPicker({ id: 'zhreplays', mode: 'read' });
-      await idbSet(DIR);
-      $('refBtn').classList.remove('hidden');
+    } catch(e) {
+      console.warn("Directory picker cancelled or error:", e);
+      if (e.name !== 'AbortError') $('fd').click();
+      return;
+    }
+    if (DIR) {
+      // 1. Immediately scan and render replays!
       scanDir(DIR);
-    } catch(e){}
-  } else $('fd').click();
+      // 2. Non-blocking storage save
+      try { idbSet(DIR); } catch(err){}
+      if ($('refBtn')) $('refBtn').classList.remove('hidden');
+    }
+  } else {
+    $('fd').click();
+  }
 };
 
-$('fd').onchange = e => {
-  const fs = [...e.target.files].filter(f => /\.(rep|zhtelemetry)$/i.test(f.name)).sort((a, b) => b.lastModified - a.lastModified);
-  loadList(fs, fs[0]?.webkitRelativePath.split('/')[0] || 'folder');
+$('fd').onchange = async e => {
+  const fs = [...e.target.files];
+  const reps = fs.filter(f => /\.rep$/i.test(f.name)).sort((a, b) => b.lastModified - a.lastModified);
+  const telems = fs.filter(f => /\.(zhtelemetry|json)$/i.test(f.name));
+  const folderName = fs[0]?.webkitRelativePath.split('/')[0] || 'folder';
+  await loadList(reps, folderName, {}, telems);
 };
 
 $('refBtn').onclick = async () => {
