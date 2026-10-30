@@ -43,7 +43,7 @@ for %%p in (
 ) do (
     if exist "%%p" (
         echo [*] Starting Live Telemetry Companion [%%p]...
-        "%%p" zh_recorder.py
+        "%%p" -u zh_recorder.py
         goto done
     )
 )

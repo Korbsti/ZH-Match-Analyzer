@@ -17,6 +17,55 @@
 
 ---
 
+## What's New in v6.0
+
+### 🎨 Mod themes – the whole app looks like your mod
+Open **Theme** (or press `T`). Pick a mod and the entire interface re-skins: colours, headline fonts, background artwork, buttons, badges, even the tactical-map grid.
+
+| Theme | Look |
+|---|---|
+| **Zero Hour Classic** | Steel blue + indigo, tactical grid |
+| **Rise of the Reds** | Crimson & gold, ☭ badge, star pattern, Oswald headings |
+| **ShockWave** | Electric cyan & violet, hex grid, Orbitron headings |
+| **Contra** | Olive & khaki, camo stripes, Black Ops headings |
+| **Operation Firestorm** | Ember orange & yellow, glowing embers |
+| **Custom** | Pick your own two colours |
+
+**Auto-detect** (default) reads the replay's version / name / map and switches theme when you click a replay from a different mod. Prefer one look? Choose it manually.
+
+### 🖼 Custom wallpaper mode
+- Choose any image (or paste an image URL, or drop an image onto the Theme panel).
+- Sliders for **dim**, **blur** and **panel opacity** so cards turn glassy and your wallpaper shows through.
+- Images are resized automatically and remembered between sessions. Switch back to *Mod artwork* or *Plain* any time.
+
+### 🚀 Launcher / EXE with Desktop shortcut
+`zh_launcher.py` (or the built `ZH_Match_Analyzer.exe`) starts a tiny local web server on `127.0.0.1` (never exposed to your network), opens the analyzer in your browser, **auto-loads your replay folder**, and creates a **Desktop shortcut** the first time it runs.
+
+**Get the EXE (pick one):**
+1. **Windows PC with Python:** double-click `Build_EXE.bat` → produces `ZH_Match_Analyzer.exe` and launches it.
+2. **GitHub:** push the repo, open *Actions → Build Windows EXE → Run workflow*, download the artifact (tagging a release `v6.0` attaches it automatically).
+3. **No build at all:** double-click `Launch_App.bat` (needs Python).
+
+Launcher options: `--port N`, `--replays "D:\\Replays"`, `--no-browser`, `--shortcut`, `--no-shortcut`, `--record` (also runs the live recorder).
+The replay folder is auto-detected (Documents / OneDrive); `--replays` remembers a custom one.
+
+Also fixed: recorder `.zhtelemetry` files are now loaded properly when scanning a folder, and a match is no longer listed twice (telemetry + its `.rep` copy).
+
+---
+
+## What's New in v5.0
+
+- **Colour overhaul** – every player now gets a unique hue, and none of them clash with the built-in meanings (red = combat, amber = attack-move, orange = powers, slate = selection). Action-category bars no longer reuse player colours.
+- **New chart engine** – crisp HiDPI canvases, "nice" axis scales, `k` abbreviations, gradient fills, crosshair hover with per-player markers and a sorted tooltip.
+- **Match Pulse ribbon** (Overview) – powers, eliminations and clashes plotted across the whole match.
+- **Tactical Radar** (Compare) – seven normalised metrics per player on one chart.
+- **Save map as PNG** (📸 button or `P`) straight from the Tactical Map.
+- **Keyboard shortcuts** – press `?` in the app. `1-9` tabs, `J/K` replays, `/` search, `Space` play/pause, `←/→` seek, `+/-/0` zoom, `[` sidebar.
+- **Refreshed UI** – glass cards, gradient tabs, soft entrance animations, toasts, focus rings, reduced-motion support.
+- **Reliability** – Tailwind now loads from the official CDN with the previous host as automatic fallback; the recorder launcher runs unbuffered on every Python path.
+
+---
+
 ## Overview
 
 **ZH Match Analyzer** is an advanced, client-side tactical replay analyzer and live telemetry system designed for competitive and casual *Zero Hour* players. Built to analyze standard SAGE `.rep` files as well as comprehensive live companion logs (`.zhtelemetry`), it brings modern esports-grade telemetry, casualty breakdowns, second-by-second economy tracking, and high-resolution spatial radar visualization directly to your browser.

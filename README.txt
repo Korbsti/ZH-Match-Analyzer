@@ -76,3 +76,8 @@ FILES IN THIS PACKAGE:
 
 Created for the C&C Zero Hour community by Korbsti.
 Distributed under the MIT License.
+
+
+v5.0 highlights: unique player colours, new chart engine, Match Pulse ribbon, Tactical Radar, map PNG export, keyboard shortcuts (press ? in the app).
+
+v6.0: mod themes (ROTR, ShockWave, Contra, Firestorm, Custom, auto-detect), custom wallpaper mode, zh_launcher.py + Build_EXE.bat (EXE with Desktop shortcut that opens the app).
